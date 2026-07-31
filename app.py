@@ -35,8 +35,8 @@ if modulo == "🏠 Inicio":
     st.success("Proyecto inicializado correctamente.")
     st.subheader("Estado")
     st.info(
-        "La base se crea automáticamente al cargar "
-        "Favoritos por primera vez."
+        "La base conserva a todos los socios históricos, "
+        "aunque ya no aparezcan actualmente en Favoritos."
     )
 
 elif modulo == "👥 Socios":
@@ -69,9 +69,9 @@ elif modulo == "👥 Socios":
     st.divider()
     st.subheader("Resumen")
 
+    historicos = "-"
     actuales = "-"
     nuevos = "-"
-    retirados = "-"
     pendientes = "-"
 
     if actualizar:
@@ -81,42 +81,45 @@ elif modulo == "👥 Socios":
 
         else:
             try:
-                if favoritos.name.lower().endswith(".csv"):
+                with st.spinner("Actualizando la base de socios..."):
 
-                    try:
-                        df_favoritos = pd.read_csv(
-                            favoritos,
-                            sep=";",
-                            engine="python",
-                        )
+                    if favoritos.name.lower().endswith(".csv"):
 
-                        if len(df_favoritos.columns) == 1:
-                            raise ValueError("Separador incorrecto")
+                        try:
+                            df_favoritos = pd.read_csv(
+                                favoritos,
+                                sep=";",
+                                engine="python",
+                            )
 
-                    except Exception:
-                        favoritos.seek(0)
+                            if len(df_favoritos.columns) == 1:
+                                raise ValueError("Separador incorrecto")
 
-                        df_favoritos = pd.read_csv(
-                            favoritos,
-                            sep=",",
-                            engine="python",
-                        )
+                        except Exception:
+                            favoritos.seek(0)
 
-                else:
-                    df_favoritos = pd.read_excel(favoritos)
+                            df_favoritos = pd.read_csv(
+                                favoritos,
+                                sep=",",
+                                engine="python",
+                            )
 
-                resultado = socios.actualizar_base(df_favoritos)
+                    else:
+                        df_favoritos = pd.read_excel(favoritos)
 
-                actuales = resultado["socios_actuales"]
+                    resultado = socios.actualizar_base(df_favoritos)
+
+                historicos = resultado["socios_historicos"]
+                actuales = resultado["en_favoritos_actual"]
                 nuevos = resultado["nuevos"]
-                retirados = resultado["retirados"]
                 pendientes = resultado["pendientes_dni"]
 
                 st.success("Base actualizada correctamente.")
 
                 st.caption(
-                    f"Socios acumulados en el historial: "
-                    f"{resultado['socios_historicos']}"
+                    f"Ya no aparecen actualmente en Favoritos: "
+                    f"{resultado['ya_no_aparecen']}. "
+                    "Igualmente permanecen disponibles para campañas."
                 )
 
             except Exception as error:
@@ -124,9 +127,9 @@ elif modulo == "👥 Socios":
 
     c1, c2, c3, c4 = st.columns(4)
 
-    c1.metric("Socios actuales", actuales)
-    c2.metric("Nuevos", nuevos)
-    c3.metric("Retirados", retirados)
+    c1.metric("Socios históricos", historicos)
+    c2.metric("En Favoritos actual", actuales)
+    c3.metric("Nuevos", nuevos)
     c4.metric("Pendientes DNI", pendientes)
 
 else:

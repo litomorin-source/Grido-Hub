@@ -10,8 +10,8 @@ COLUMNAS_PROTEGIDAS = {
     "WhatsApp",
     "Fecha Alta",
     "Última Actualización",
-    "Activo",
-    "Fecha Baja",
+    "En Favoritos Actual",
+    "Última vez en Favoritos",
 }
 
 
@@ -55,7 +55,7 @@ def preparar_favoritos(favoritos):
     return favoritos
 
 
-def convertir_activo(serie):
+def convertir_booleano(serie):
     return (
         serie.fillna("")
         .astype(str)
@@ -79,12 +79,9 @@ def contar_pendientes_dni(base):
 
     dni_valido = dni.str.len().isin([7, 8])
 
-    if "Activo" in base.columns:
-        activos = convertir_activo(base["Activo"])
-    else:
-        activos = pd.Series(True, index=base.index)
-
-    return int((activos & ~dni_valido).sum())
+    # Se cuentan todos los socios históricos,
+    # aparezcan o no actualmente en Favoritos.
+    return int((~dni_valido).sum())
 
 
 def crear_base_inicial(favoritos):
@@ -96,8 +93,8 @@ def crear_base_inicial(favoritos):
     base["WhatsApp"] = ""
     base["Fecha Alta"] = ahora
     base["Última Actualización"] = ahora
-    base["Activo"] = True
-    base["Fecha Baja"] = ""
+    base["En Favoritos Actual"] = True
+    base["Última vez en Favoritos"] = ahora
 
     base = base.drop(
         columns=["_EMAIL_NORMALIZADO"],
@@ -108,10 +105,10 @@ def crear_base_inicial(favoritos):
     base.to_excel(RUTA_BASE, index=False)
 
     return {
-        "socios_actuales": len(base),
         "socios_historicos": len(base),
+        "en_favoritos_actual": len(base),
         "nuevos": len(base),
-        "retirados": 0,
+        "ya_no_aparecen": 0,
         "pendientes_dni": len(base),
     }
 
@@ -127,18 +124,17 @@ def actualizar_base(favoritos):
     base = pd.read_excel(
         RUTA_BASE,
         dtype=str,
-    ).fillna("")
+    ).fillna("").astype(object)
 
-    # Evita errores al mezclar texto, fechas y booleanos
-    base = base.astype(object)
+    # Migración de las versiones anteriores.
+    if "En Favoritos Actual" not in base.columns:
+        if "Activo" in base.columns:
+            base["En Favoritos Actual"] = convertir_booleano(base["Activo"])
+        else:
+            base["En Favoritos Actual"] = True
 
-    if "Activo" not in base.columns:
-        base["Activo"] = True
-    else:
-        base["Activo"] = convertir_activo(base["Activo"])
-
-    if "Fecha Baja" not in base.columns:
-        base["Fecha Baja"] = ""
+    if "Última vez en Favoritos" not in base.columns:
+        base["Última vez en Favoritos"] = ""
 
     if "DNI" not in base.columns:
         base["DNI"] = ""
@@ -156,8 +152,8 @@ def actualizar_base(favoritos):
     emails_favoritos = set(favoritos["_EMAIL_NORMALIZADO"])
 
     emails_nuevos = emails_favoritos - emails_base
-    emails_retirados = emails_base - emails_favoritos
     emails_existentes = emails_base & emails_favoritos
+    emails_que_ya_no_aparecen = emails_base - emails_favoritos
 
     nuevos = favoritos[
         favoritos["_EMAIL_NORMALIZADO"].isin(emails_nuevos)
@@ -168,8 +164,8 @@ def actualizar_base(favoritos):
         nuevos["WhatsApp"] = ""
         nuevos["Fecha Alta"] = ahora
         nuevos["Última Actualización"] = ahora
-        nuevos["Activo"] = True
-        nuevos["Fecha Baja"] = ""
+        nuevos["En Favoritos Actual"] = True
+        nuevos["Última vez en Favoritos"] = ahora
 
     favoritos_indexado = favoritos.set_index("_EMAIL_NORMALIZADO")
     base_indexada = base.set_index("_EMAIL_NORMALIZADO")
@@ -190,20 +186,14 @@ def actualizar_base(favoritos):
                 favoritos_indexado.at[email, columna]
             )
 
+    # Quienes aparecen actualmente.
     for email in emails_existentes:
-        base_indexada.at[email, "Activo"] = True
-        base_indexada.at[email, "Fecha Baja"] = ""
+        base_indexada.at[email, "En Favoritos Actual"] = True
+        base_indexada.at[email, "Última vez en Favoritos"] = ahora
 
-    retirados_nuevos = 0
-
-    for email in emails_retirados:
-        estaba_activo = bool(base_indexada.at[email, "Activo"])
-
-        if estaba_activo:
-            retirados_nuevos += 1
-            base_indexada.at[email, "Fecha Baja"] = ahora
-
-        base_indexada.at[email, "Activo"] = False
+    # Quienes ya no aparecen se conservan completos.
+    for email in emails_que_ya_no_aparecen:
+        base_indexada.at[email, "En Favoritos Actual"] = False
 
     base = base_indexada.reset_index().astype(object)
 
@@ -218,21 +208,25 @@ def actualizar_base(favoritos):
 
     pendientes = contar_pendientes_dni(base)
 
-    socios_actuales = int(
-        convertir_activo(base["Activo"]).sum()
+    en_favoritos_actual = int(
+        convertir_booleano(base["En Favoritos Actual"]).sum()
     )
 
     base = base.drop(
-        columns=["_EMAIL_NORMALIZADO"],
+        columns=[
+            "_EMAIL_NORMALIZADO",
+            "Activo",
+            "Fecha Baja",
+        ],
         errors="ignore",
     )
 
     base.to_excel(RUTA_BASE, index=False)
 
     return {
-        "socios_actuales": socios_actuales,
         "socios_historicos": len(base),
+        "en_favoritos_actual": en_favoritos_actual,
         "nuevos": len(nuevos),
-        "retirados": retirados_nuevos,
+        "ya_no_aparecen": len(emails_que_ya_no_aparecen),
         "pendientes_dni": pendientes,
     }
