@@ -34,6 +34,9 @@ st.caption("Versión 0.1.0")
 
 resumen_general = socios.obtener_resumen_base()
 
+if "dni_chrome_abierto" not in st.session_state:
+    st.session_state["dni_chrome_abierto"] = False
+
 if modulo == "🏠 Inicio":
 
     st.success("Proyecto inicializado correctamente.")
@@ -117,33 +120,35 @@ elif modulo == "👥 Socios":
         )
 
     with col2:
-        obtener_dni = st.button(
+        preparar_dni = st.button(
             "🆔 Obtener DNI",
             use_container_width=True,
             disabled=not resumen_general["existe"],
             key="obtener_dni",
         )
 
-    if obtener_dni:
+    if preparar_dni:
         cantidad = dni.obtener_cantidad_pendientes()
+        por_procesar = dni.obtener_cantidad_por_procesar()
 
         if cantidad == 0:
             st.success("No hay socios pendientes de DNI.")
-
         else:
             st.info(
-                f"Hay {cantidad} socios pendientes de DNI."
+                f"Hay {cantidad} socios sin DNI. "
+                f"{por_procesar} todavía no fueron procesados."
             )
 
             try:
                 with st.spinner("Abriendo Chrome..."):
-                    driver = dni.iniciar_navegador()
-                    st.session_state["dni_driver"] = driver
+                    dni.iniciar_navegador()
+
+                st.session_state["dni_chrome_abierto"] = True
 
                 st.success(
-                    "Chrome abierto correctamente. "
-                    "Iniciá sesión si te lo solicita y dejá abierta "
-                    "la pantalla Consulta de Socios."
+                    "Chrome abierto. Iniciá sesión, resolvé el captcha, "
+                    "entrá a Consulta de Socios y marcá manualmente "
+                    "'Solo por email'. Después volvé acá."
                 )
 
             except Exception as error:
@@ -151,14 +156,123 @@ elif modulo == "👥 Socios":
                     f"No se pudo abrir Chrome: {error}"
                 )
 
+    if st.session_state["dni_chrome_abierto"]:
+
+        st.subheader("Prueba controlada")
+
+        cantidad_lote = st.selectbox(
+            "Cantidad a procesar",
+            options=[1, 5],
+            index=1,
+            key="cantidad_lote_dni",
+        )
+
+        iniciar_lote = st.button(
+            f"▶ Procesar {cantidad_lote} socios",
+            use_container_width=True,
+            key="procesar_lote_dni",
+        )
+
+        if iniciar_lote:
+            barra = st.progress(0)
+            estado_actual = st.empty()
+            log = st.empty()
+            resultados_visibles = []
+
+            def actualizar_progreso(resultado):
+                avance = (
+                    resultado["posicion"]
+                    / resultado["total"]
+                )
+
+                barra.progress(avance)
+
+                estado_actual.write(
+                    f"Procesando {resultado['posicion']} "
+                    f"de {resultado['total']}: "
+                    f"**{resultado['email']}**"
+                )
+
+                simbolo = {
+                    "OK": "✅",
+                    "SIN_DNI": "⚠️",
+                    "ERROR": "❌",
+                }.get(resultado["estado"], "•")
+
+                texto = (
+                    f"{simbolo} {resultado['email']} — "
+                    f"{resultado['estado']}"
+                )
+
+                if resultado["dni"]:
+                    texto += f" — DNI {resultado['dni']}"
+
+                resultados_visibles.append(texto)
+
+                log.markdown(
+                    "\n\n".join(resultados_visibles)
+                )
+
+            try:
+                with st.spinner(
+                    "Procesando el lote de DNI..."
+                ):
+                    resumen_lote = dni.procesar_lote(
+                        cantidad_lote,
+                        callback=actualizar_progreso,
+                    )
+
+                barra.progress(1.0)
+                estado_actual.success("Lote finalizado.")
+
+                r1, r2, r3, r4 = st.columns(4)
+
+                r1.metric(
+                    "Procesados",
+                    resumen_lote["procesados"],
+                )
+                r2.metric(
+                    "Encontrados",
+                    resumen_lote["encontrados"],
+                )
+                r3.metric(
+                    "Sin DNI",
+                    resumen_lote["sin_dni"],
+                )
+                r4.metric(
+                    "Errores",
+                    resumen_lote["errores"],
+                )
+
+                tarjeta_pendientes.metric(
+                    "Pendientes DNI",
+                    resumen_lote["pendientes_restantes"],
+                )
+
+                st.caption(
+                    "Pendientes sin procesar automáticamente: "
+                    f"{resumen_lote['por_procesar']}. "
+                    "Se creó un backup antes del lote y cada "
+                    "resultado fue guardado inmediatamente."
+                )
+
+            except Exception as error:
+                st.error(
+                    f"Falló el procesamiento del lote: {error}"
+                )
+
     if actualizar:
 
         if favoritos is None:
-            st.warning("Primero seleccioná el archivo Favoritos.")
+            st.warning(
+                "Primero seleccioná el archivo Favoritos."
+            )
 
         else:
             try:
-                with st.spinner("Actualizando la base de socios..."):
+                with st.spinner(
+                    "Actualizando la base de socios..."
+                ):
 
                     if favoritos.name.lower().endswith(".csv"):
 
@@ -184,9 +298,13 @@ elif modulo == "👥 Socios":
                             )
 
                     else:
-                        df_favoritos = pd.read_excel(favoritos)
+                        df_favoritos = pd.read_excel(
+                            favoritos
+                        )
 
-                    resultado = socios.actualizar_base(df_favoritos)
+                    resultado = socios.actualizar_base(
+                        df_favoritos
+                    )
 
                 tarjeta_historicos.metric(
                     "Socios históricos",
@@ -208,16 +326,21 @@ elif modulo == "👥 Socios":
                     resultado["pendientes_dni"],
                 )
 
-                st.success("Base actualizada correctamente.")
+                st.success(
+                    "Base actualizada correctamente."
+                )
 
                 st.caption(
-                    f"Ya no aparecen actualmente en Favoritos: "
+                    "Ya no aparecen actualmente en Favoritos: "
                     f"{resultado['ya_no_aparecen']}. "
-                    "Igualmente permanecen disponibles para campañas."
+                    "Igualmente permanecen disponibles "
+                    "para campañas."
                 )
 
             except Exception as error:
-                st.error(f"No se pudo actualizar la base: {error}")
+                st.error(
+                    f"No se pudo actualizar la base: {error}"
+                )
 
 else:
 

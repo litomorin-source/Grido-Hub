@@ -1,9 +1,12 @@
+from datetime import datetime
 from pathlib import Path
+import shutil
 
 import pandas as pd
 
 
 RUTA_BASE = Path("data/base_maestra.xlsx")
+CARPETA_BACKUPS = Path("data/backups")
 
 COLUMNAS_PROTEGIDAS = {
     "DNI",
@@ -15,14 +18,49 @@ COLUMNAS_PROTEGIDAS = {
 }
 
 
+def crear_backup():
+    """
+    Crea una copia de seguridad de la Base Maestra antes de modificarla.
+    """
+
+    if not RUTA_BASE.exists():
+        return None
+
+    CARPETA_BACKUPS.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    nombre_backup = (
+        "base_maestra_"
+        + datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")
+        + ".xlsx"
+    )
+
+    ruta_backup = CARPETA_BACKUPS / nombre_backup
+
+    shutil.copy2(
+        RUTA_BASE,
+        ruta_backup,
+    )
+
+    return ruta_backup
+
+
 def buscar_columna_email(df):
     for columna in df.columns:
         nombre = str(columna).strip().lower()
 
-        if "email" in nombre or "mail" in nombre or "correo" in nombre:
+        if (
+            "email" in nombre
+            or "mail" in nombre
+            or "correo" in nombre
+        ):
             return columna
 
-    raise ValueError("No encontré una columna de email en el archivo.")
+    raise ValueError(
+        "No encontré una columna de email en el archivo."
+    )
 
 
 def normalizar_email(serie):
@@ -44,7 +82,10 @@ def preparar_favoritos(favoritos):
     )
 
     favoritos = favoritos[
-        favoritos["_EMAIL_NORMALIZADO"].str.contains("@", na=False)
+        favoritos["_EMAIL_NORMALIZADO"].str.contains(
+            "@",
+            na=False,
+        )
     ].copy()
 
     favoritos = favoritos.drop_duplicates(
@@ -61,7 +102,15 @@ def convertir_booleano(serie):
         .astype(str)
         .str.strip()
         .str.lower()
-        .isin(["true", "1", "sí", "si", "activo"])
+        .isin(
+            [
+                "true",
+                "1",
+                "sí",
+                "si",
+                "activo",
+            ]
+        )
     )
 
 
@@ -73,7 +122,11 @@ def contar_pendientes_dni(base):
         base["DNI"]
         .fillna("")
         .astype(str)
-        .str.replace(r"\D", "", regex=True)
+        .str.replace(
+            r"\D",
+            "",
+            regex=True,
+        )
         .str.strip()
     )
 
@@ -94,7 +147,9 @@ def obtener_ultima_actualizacion(base):
     if fechas.empty:
         return "-"
 
-    return fechas.max().strftime("%d/%m/%Y %H:%M")
+    return fechas.max().strftime(
+        "%d/%m/%Y %H:%M"
+    )
 
 
 def obtener_resumen_base():
@@ -116,12 +171,18 @@ def obtener_resumen_base():
 
     if "En Favoritos Actual" in base.columns:
         en_favoritos = int(
-            convertir_booleano(base["En Favoritos Actual"]).sum()
+            convertir_booleano(
+                base["En Favoritos Actual"]
+            ).sum()
         )
+
     elif "Activo" in base.columns:
         en_favoritos = int(
-            convertir_booleano(base["Activo"]).sum()
+            convertir_booleano(
+                base["Activo"]
+            ).sum()
         )
+
     else:
         en_favoritos = historicos
 
@@ -130,12 +191,16 @@ def obtener_resumen_base():
         "socios_historicos": historicos,
         "en_favoritos_actual": en_favoritos,
         "pendientes_dni": contar_pendientes_dni(base),
-        "ultima_actualizacion": obtener_ultima_actualizacion(base),
+        "ultima_actualizacion": obtener_ultima_actualizacion(
+            base
+        ),
     }
 
 
 def crear_base_inicial(favoritos):
-    ahora = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
+    ahora = pd.Timestamp.now().strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
 
     base = favoritos.copy().astype(object)
 
@@ -151,8 +216,15 @@ def crear_base_inicial(favoritos):
         errors="ignore",
     )
 
-    RUTA_BASE.parent.mkdir(parents=True, exist_ok=True)
-    base.to_excel(RUTA_BASE, index=False)
+    RUTA_BASE.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    base.to_excel(
+        RUTA_BASE,
+        index=False,
+    )
 
     return {
         "socios_historicos": len(base),
@@ -160,7 +232,9 @@ def crear_base_inicial(favoritos):
         "nuevos": len(base),
         "ya_no_aparecen": 0,
         "pendientes_dni": len(base),
-        "ultima_actualizacion": obtener_ultima_actualizacion(base),
+        "ultima_actualizacion": obtener_ultima_actualizacion(
+            base
+        ),
     }
 
 
@@ -170,12 +244,20 @@ def actualizar_base(favoritos):
     if not RUTA_BASE.exists():
         return crear_base_inicial(favoritos)
 
-    ahora = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
+    crear_backup()
 
-    base = pd.read_excel(
-        RUTA_BASE,
-        dtype=str,
-    ).fillna("").astype(object)
+    ahora = pd.Timestamp.now().strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+
+    base = (
+        pd.read_excel(
+            RUTA_BASE,
+            dtype=str,
+        )
+        .fillna("")
+        .astype(object)
+    )
 
     if "En Favoritos Actual" not in base.columns:
         if "Activo" in base.columns:
@@ -200,15 +282,30 @@ def actualizar_base(favoritos):
         base[columna_email_base]
     )
 
-    emails_base = set(base["_EMAIL_NORMALIZADO"])
-    emails_favoritos = set(favoritos["_EMAIL_NORMALIZADO"])
+    emails_base = set(
+        base["_EMAIL_NORMALIZADO"]
+    )
 
-    emails_nuevos = emails_favoritos - emails_base
-    emails_existentes = emails_base & emails_favoritos
-    emails_que_ya_no_aparecen = emails_base - emails_favoritos
+    emails_favoritos = set(
+        favoritos["_EMAIL_NORMALIZADO"]
+    )
+
+    emails_nuevos = (
+        emails_favoritos - emails_base
+    )
+
+    emails_existentes = (
+        emails_base & emails_favoritos
+    )
+
+    emails_que_ya_no_aparecen = (
+        emails_base - emails_favoritos
+    )
 
     nuevos = favoritos[
-        favoritos["_EMAIL_NORMALIZADO"].isin(emails_nuevos)
+        favoritos["_EMAIL_NORMALIZADO"].isin(
+            emails_nuevos
+        )
     ].copy().astype(object)
 
     if not nuevos.empty:
@@ -219,8 +316,13 @@ def actualizar_base(favoritos):
         nuevos["En Favoritos Actual"] = True
         nuevos["Última vez en Favoritos"] = ahora
 
-    favoritos_indexado = favoritos.set_index("_EMAIL_NORMALIZADO")
-    base_indexada = base.set_index("_EMAIL_NORMALIZADO")
+    favoritos_indexado = favoritos.set_index(
+        "_EMAIL_NORMALIZADO"
+    )
+
+    base_indexada = base.set_index(
+        "_EMAIL_NORMALIZADO"
+    )
 
     columnas_actualizables = [
         columna
@@ -239,13 +341,27 @@ def actualizar_base(favoritos):
             )
 
     for email in emails_existentes:
-        base_indexada.at[email, "En Favoritos Actual"] = True
-        base_indexada.at[email, "Última vez en Favoritos"] = ahora
+        base_indexada.at[
+            email,
+            "En Favoritos Actual",
+        ] = True
+
+        base_indexada.at[
+            email,
+            "Última vez en Favoritos",
+        ] = ahora
 
     for email in emails_que_ya_no_aparecen:
-        base_indexada.at[email, "En Favoritos Actual"] = False
+        base_indexada.at[
+            email,
+            "En Favoritos Actual",
+        ] = False
 
-    base = base_indexada.reset_index().astype(object)
+    base = (
+        base_indexada
+        .reset_index()
+        .astype(object)
+    )
 
     if not nuevos.empty:
         base = pd.concat(
@@ -265,15 +381,26 @@ def actualizar_base(favoritos):
         errors="ignore",
     )
 
-    base.to_excel(RUTA_BASE, index=False)
+    base.to_excel(
+        RUTA_BASE,
+        index=False,
+    )
 
     return {
         "socios_historicos": len(base),
         "en_favoritos_actual": int(
-            convertir_booleano(base["En Favoritos Actual"]).sum()
+            convertir_booleano(
+                base["En Favoritos Actual"]
+            ).sum()
         ),
         "nuevos": len(nuevos),
-        "ya_no_aparecen": len(emails_que_ya_no_aparecen),
-        "pendientes_dni": contar_pendientes_dni(base),
-        "ultima_actualizacion": obtener_ultima_actualizacion(base),
+        "ya_no_aparecen": len(
+            emails_que_ya_no_aparecen
+        ),
+        "pendientes_dni": contar_pendientes_dni(
+            base
+        ),
+        "ultima_actualizacion": obtener_ultima_actualizacion(
+            base
+        ),
     }
