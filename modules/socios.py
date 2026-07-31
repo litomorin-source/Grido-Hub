@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import pandas as pd
@@ -38,13 +37,16 @@ def contar_pendientes_dni(base):
         .str.strip()
     )
 
-    return int(~dni.str.len().isin([7, 8]).sum())
+    dni_valido = dni.str.len().isin([7, 8])
+
+    return int((~dni_valido).sum())
 
 
 def actualizar_base(favoritos):
     favoritos = favoritos.copy()
 
     columna_email_favoritos = buscar_columna_email(favoritos)
+
     favoritos["_EMAIL_NORMALIZADO"] = normalizar_email(
         favoritos[columna_email_favoritos]
     )
@@ -69,7 +71,10 @@ def actualizar_base(favoritos):
         base["Fecha Alta"] = ahora
         base["Última Actualización"] = ahora
 
-        base = base.drop(columns=["_EMAIL_NORMALIZADO"])
+        base = base.drop(
+            columns=["_EMAIL_NORMALIZADO"],
+            errors="ignore"
+        )
 
         RUTA_BASE.parent.mkdir(parents=True, exist_ok=True)
         base.to_excel(RUTA_BASE, index=False)
@@ -80,8 +85,11 @@ def actualizar_base(favoritos):
             "pendientes_dni": len(base),
         }
 
-    # Actualización de una base existente
-    base = pd.read_excel(RUTA_BASE, dtype=str).fillna("")
+    # Actualización de base existente
+    base = pd.read_excel(
+        RUTA_BASE,
+        dtype=str
+    ).fillna("")
 
     columna_email_base = buscar_columna_email(base)
 
@@ -89,7 +97,9 @@ def actualizar_base(favoritos):
         base[columna_email_base]
     )
 
-    emails_existentes = set(base["_EMAIL_NORMALIZADO"])
+    emails_existentes = set(
+        base["_EMAIL_NORMALIZADO"]
+    )
 
     nuevos = favoritos[
         ~favoritos["_EMAIL_NORMALIZADO"].isin(emails_existentes)
