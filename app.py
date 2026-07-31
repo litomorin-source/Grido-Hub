@@ -3,9 +3,11 @@ import importlib
 import pandas as pd
 import streamlit as st
 
+import modules.dni as dni
 import modules.socios as socios
 
 importlib.reload(socios)
+importlib.reload(dni)
 
 st.set_page_config(
     page_title="Grido Hub",
@@ -35,7 +37,6 @@ resumen_general = socios.obtener_resumen_base()
 if modulo == "🏠 Inicio":
 
     st.success("Proyecto inicializado correctamente.")
-
     st.subheader("Estado")
 
     if resumen_general["existe"]:
@@ -75,7 +76,6 @@ elif modulo == "👥 Socios":
     actuales = resumen_general["en_favoritos_actual"]
     pendientes = resumen_general["pendientes_dni"]
     ultima_actualizacion = resumen_general["ultima_actualizacion"]
-    nuevos = "-"
 
     c1, c2, c3, c4 = st.columns(4)
 
@@ -86,7 +86,7 @@ elif modulo == "👥 Socios":
 
     tarjeta_historicos.metric("Socios históricos", historicos)
     tarjeta_actuales.metric("En Favoritos actual", actuales)
-    tarjeta_nuevos.metric("Nuevos última carga", nuevos)
+    tarjeta_nuevos.metric("Nuevos última carga", "-")
     tarjeta_pendientes.metric("Pendientes DNI", pendientes)
 
     if resumen_general["existe"]:
@@ -117,12 +117,39 @@ elif modulo == "👥 Socios":
         )
 
     with col2:
-        st.button(
+        obtener_dni = st.button(
             "🆔 Obtener DNI",
             use_container_width=True,
-            disabled=True,
+            disabled=not resumen_general["existe"],
             key="obtener_dni",
         )
+
+    if obtener_dni:
+        cantidad = dni.obtener_cantidad_pendientes()
+
+        if cantidad == 0:
+            st.success("No hay socios pendientes de DNI.")
+
+        else:
+            st.info(
+                f"Hay {cantidad} socios pendientes de DNI."
+            )
+
+            try:
+                with st.spinner("Abriendo Chrome..."):
+                    driver = dni.iniciar_navegador()
+                    st.session_state["dni_driver"] = driver
+
+                st.success(
+                    "Chrome abierto correctamente. "
+                    "Iniciá sesión si te lo solicita y dejá abierta "
+                    "la pantalla Consulta de Socios."
+                )
+
+            except Exception as error:
+                st.error(
+                    f"No se pudo abrir Chrome: {error}"
+                )
 
     if actualizar:
 
