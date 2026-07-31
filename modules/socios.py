@@ -79,9 +79,59 @@ def contar_pendientes_dni(base):
 
     dni_valido = dni.str.len().isin([7, 8])
 
-    # Se cuentan todos los socios históricos,
-    # aparezcan o no actualmente en Favoritos.
     return int((~dni_valido).sum())
+
+
+def obtener_ultima_actualizacion(base):
+    if "Última Actualización" not in base.columns:
+        return "-"
+
+    fechas = pd.to_datetime(
+        base["Última Actualización"],
+        errors="coerce",
+    ).dropna()
+
+    if fechas.empty:
+        return "-"
+
+    return fechas.max().strftime("%d/%m/%Y %H:%M")
+
+
+def obtener_resumen_base():
+    if not RUTA_BASE.exists():
+        return {
+            "existe": False,
+            "socios_historicos": 0,
+            "en_favoritos_actual": 0,
+            "pendientes_dni": 0,
+            "ultima_actualizacion": "-",
+        }
+
+    base = pd.read_excel(
+        RUTA_BASE,
+        dtype=str,
+    ).fillna("")
+
+    historicos = len(base)
+
+    if "En Favoritos Actual" in base.columns:
+        en_favoritos = int(
+            convertir_booleano(base["En Favoritos Actual"]).sum()
+        )
+    elif "Activo" in base.columns:
+        en_favoritos = int(
+            convertir_booleano(base["Activo"]).sum()
+        )
+    else:
+        en_favoritos = historicos
+
+    return {
+        "existe": True,
+        "socios_historicos": historicos,
+        "en_favoritos_actual": en_favoritos,
+        "pendientes_dni": contar_pendientes_dni(base),
+        "ultima_actualizacion": obtener_ultima_actualizacion(base),
+    }
 
 
 def crear_base_inicial(favoritos):
@@ -110,6 +160,7 @@ def crear_base_inicial(favoritos):
         "nuevos": len(base),
         "ya_no_aparecen": 0,
         "pendientes_dni": len(base),
+        "ultima_actualizacion": obtener_ultima_actualizacion(base),
     }
 
 
@@ -126,10 +177,11 @@ def actualizar_base(favoritos):
         dtype=str,
     ).fillna("").astype(object)
 
-    # Migración de las versiones anteriores.
     if "En Favoritos Actual" not in base.columns:
         if "Activo" in base.columns:
-            base["En Favoritos Actual"] = convertir_booleano(base["Activo"])
+            base["En Favoritos Actual"] = convertir_booleano(
+                base["Activo"]
+            )
         else:
             base["En Favoritos Actual"] = True
 
@@ -186,12 +238,10 @@ def actualizar_base(favoritos):
                 favoritos_indexado.at[email, columna]
             )
 
-    # Quienes aparecen actualmente.
     for email in emails_existentes:
         base_indexada.at[email, "En Favoritos Actual"] = True
         base_indexada.at[email, "Última vez en Favoritos"] = ahora
 
-    # Quienes ya no aparecen se conservan completos.
     for email in emails_que_ya_no_aparecen:
         base_indexada.at[email, "En Favoritos Actual"] = False
 
@@ -206,12 +256,6 @@ def actualizar_base(favoritos):
 
     base["Última Actualización"] = ahora
 
-    pendientes = contar_pendientes_dni(base)
-
-    en_favoritos_actual = int(
-        convertir_booleano(base["En Favoritos Actual"]).sum()
-    )
-
     base = base.drop(
         columns=[
             "_EMAIL_NORMALIZADO",
@@ -225,8 +269,11 @@ def actualizar_base(favoritos):
 
     return {
         "socios_historicos": len(base),
-        "en_favoritos_actual": en_favoritos_actual,
+        "en_favoritos_actual": int(
+            convertir_booleano(base["En Favoritos Actual"]).sum()
+        ),
         "nuevos": len(nuevos),
         "ya_no_aparecen": len(emails_que_ya_no_aparecen),
-        "pendientes_dni": pendientes,
+        "pendientes_dni": contar_pendientes_dni(base),
+        "ultima_actualizacion": obtener_ultima_actualizacion(base),
     }

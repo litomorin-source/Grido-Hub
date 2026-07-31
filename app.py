@@ -30,18 +30,76 @@ modulo = st.sidebar.radio(
 st.title("🍦 Grido Hub")
 st.caption("Versión 0.1.0")
 
+resumen_general = socios.obtener_resumen_base()
+
 if modulo == "🏠 Inicio":
 
     st.success("Proyecto inicializado correctamente.")
+
     st.subheader("Estado")
-    st.info(
-        "La base conserva a todos los socios históricos, "
-        "aunque ya no aparezcan actualmente en Favoritos."
-    )
+
+    if resumen_general["existe"]:
+        c1, c2, c3 = st.columns(3)
+
+        c1.metric(
+            "Socios históricos",
+            resumen_general["socios_historicos"],
+        )
+
+        c2.metric(
+            "En Favoritos actual",
+            resumen_general["en_favoritos_actual"],
+        )
+
+        c3.metric(
+            "Pendientes DNI",
+            resumen_general["pendientes_dni"],
+        )
+
+        st.caption(
+            "Última actualización: "
+            f"{resumen_general['ultima_actualizacion']}"
+        )
+
+    else:
+        st.info(
+            "Todavía no existe una base de clientes. "
+            "Entrá en Socios y cargá el primer archivo Favoritos."
+        )
 
 elif modulo == "👥 Socios":
 
     st.header("👥 Socios")
+
+    historicos = resumen_general["socios_historicos"]
+    actuales = resumen_general["en_favoritos_actual"]
+    pendientes = resumen_general["pendientes_dni"]
+    ultima_actualizacion = resumen_general["ultima_actualizacion"]
+    nuevos = "-"
+
+    c1, c2, c3, c4 = st.columns(4)
+
+    tarjeta_historicos = c1.empty()
+    tarjeta_actuales = c2.empty()
+    tarjeta_nuevos = c3.empty()
+    tarjeta_pendientes = c4.empty()
+
+    tarjeta_historicos.metric("Socios históricos", historicos)
+    tarjeta_actuales.metric("En Favoritos actual", actuales)
+    tarjeta_nuevos.metric("Nuevos última carga", nuevos)
+    tarjeta_pendientes.metric("Pendientes DNI", pendientes)
+
+    if resumen_general["existe"]:
+        st.caption(
+            f"Última actualización: {ultima_actualizacion}"
+        )
+    else:
+        st.info(
+            "Este parece ser el primer uso. "
+            "Cargá el archivo Favoritos para crear la base."
+        )
+
+    st.divider()
 
     favoritos = st.file_uploader(
         "Favoritos del Club Grido",
@@ -66,14 +124,6 @@ elif modulo == "👥 Socios":
             key="obtener_dni",
         )
 
-    st.divider()
-    st.subheader("Resumen")
-
-    historicos = "-"
-    actuales = "-"
-    nuevos = "-"
-    pendientes = "-"
-
     if actualizar:
 
         if favoritos is None:
@@ -93,7 +143,9 @@ elif modulo == "👥 Socios":
                             )
 
                             if len(df_favoritos.columns) == 1:
-                                raise ValueError("Separador incorrecto")
+                                raise ValueError(
+                                    "Separador incorrecto"
+                                )
 
                         except Exception:
                             favoritos.seek(0)
@@ -109,10 +161,25 @@ elif modulo == "👥 Socios":
 
                     resultado = socios.actualizar_base(df_favoritos)
 
-                historicos = resultado["socios_historicos"]
-                actuales = resultado["en_favoritos_actual"]
-                nuevos = resultado["nuevos"]
-                pendientes = resultado["pendientes_dni"]
+                tarjeta_historicos.metric(
+                    "Socios históricos",
+                    resultado["socios_historicos"],
+                )
+
+                tarjeta_actuales.metric(
+                    "En Favoritos actual",
+                    resultado["en_favoritos_actual"],
+                )
+
+                tarjeta_nuevos.metric(
+                    "Nuevos última carga",
+                    resultado["nuevos"],
+                )
+
+                tarjeta_pendientes.metric(
+                    "Pendientes DNI",
+                    resultado["pendientes_dni"],
+                )
 
                 st.success("Base actualizada correctamente.")
 
@@ -124,13 +191,6 @@ elif modulo == "👥 Socios":
 
             except Exception as error:
                 st.error(f"No se pudo actualizar la base: {error}")
-
-    c1, c2, c3, c4 = st.columns(4)
-
-    c1.metric("Socios históricos", historicos)
-    c2.metric("En Favoritos actual", actuales)
-    c3.metric("Nuevos", nuevos)
-    c4.metric("Pendientes DNI", pendientes)
 
 else:
 
