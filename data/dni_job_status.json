@@ -1,0 +1,210 @@
+{
+  "job_id": "23dbfc3036af4220acaa28a798390331",
+  "estado": "finalizado",
+  "mensaje": "Lote finalizado correctamente.",
+  "total": 32,
+  "procesados": 32,
+  "encontrados": 32,
+  "sin_dni": 0,
+  "errores": 0,
+  "pendientes_restantes": 4,
+  "por_procesar": 0,
+  "email_actual": "",
+  "inicio": "2026-08-05 16:43:07",
+  "fin": "2026-08-05 16:49:49",
+  "segundos": 406.8,
+  "log": [
+    {
+      "email": "alifranci71@hotmail.com",
+      "estado": "OK",
+      "dni": "27518730",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "elaru87@hotmail.com",
+      "estado": "OK",
+      "dni": "33279233",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "carlarios.rosario@gmail.com",
+      "estado": "OK",
+      "dni": "30715661",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "Agusstiniita123@gmail.com",
+      "estado": "OK",
+      "dni": "29415723",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "chechulina2039@gmail.com",
+      "estado": "OK",
+      "dni": "38448219",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "nai_mishijos@hotmail.com",
+      "estado": "OK",
+      "dni": "27935252",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "cdgarrido2020@gmail.com",
+      "estado": "OK",
+      "dni": "26835929",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "dv45404@gmail.com",
+      "estado": "OK",
+      "dni": "30838165",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "nomi3101@hotmail.com.ar",
+      "estado": "OK",
+      "dni": "24860617",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "fleitasgabriela03@gmail.com",
+      "estado": "OK",
+      "dni": "39250757",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "ivanacirrincione@gmail.com",
+      "estado": "OK",
+      "dni": "24779458",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "joelandino87@yahoo.com",
+      "estado": "OK",
+      "dni": "41405168",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "jose.bejarano@ymail.com",
+      "estado": "OK",
+      "dni": "25171996",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "josecadena29@gmail.com",
+      "estado": "OK",
+      "dni": "96016045",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "juanmarasovich22@gmail.com",
+      "estado": "OK",
+      "dni": "29755821",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "marce4a0anob@hotmail.com",
+      "estado": "OK",
+      "dni": "24396603",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "julietaruizgonzalez2@gmail.com",
+      "estado": "OK",
+      "dni": "51102135",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "loa.belenb@hotmail.com",
+      "estado": "OK",
+      "dni": "38448607",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "lorenaandreabagaloni@gmail.com",
+      "estado": "OK",
+      "dni": "23914439",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "lorenaklos@gmail.com",
+      "estado": "OK",
+      "dni": "30578924",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "marita2279@hotmail.com",
+      "estado": "OK",
+      "dni": "27059854",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "martalombardi83@gmail.com",
+      "estado": "OK",
+      "dni": "5988211",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "wiztincho@hotmail.com",
+      "estado": "OK",
+      "dni": "30254456",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "canallamelina@gmail.com",
+      "estado": "OK",
+      "dni": "42557659",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "miguel.dolce@hotmail.com",
+      "estado": "OK",
+      "dni": "28331373",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "hectordipa12@gmail.com",
+      "estado": "OK",
+      "dni": "34087621",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "melinaserra86@gmail.com",
+      "estado": "OK",
+      "dni": "12528676",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "robledopablo219@gmail.com",
+      "estado": "OK",
+      "dni": "34503994",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "milo93741@gmail.com",
+      "estado": "OK",
+      "dni": "25979341",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "belumariacarrion@gmail.com",
+      "estado": "OK",
+      "dni": "32811136",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "maschio917@gmail.com",
+      "estado": "OK",
+      "dni": "31986340",
+      "detalle": "DNI encontrado"
+    },
+    {
+      "email": "yordileon97@gmail.com",
+      "estado": "OK",
+      "dni": "95850569",
+      "detalle": "DNI encontrado"
+    }
+  ]
+}
